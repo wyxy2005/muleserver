@@ -5,6 +5,7 @@ import org.apache.commons.lang.StringUtils;
 import org.mule.MessageExchangePattern;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
+import org.mule.api.construct.FlowConstruct;
 import org.mule.api.endpoint.EndpointBuilder;
 import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.endpoint.OutboundEndpoint;
@@ -15,11 +16,13 @@ import org.mule.endpoint.EndpointURIEndpointBuilder;
 import org.mule.transport.http.construct.HttpProxy;
 import org.mule.transport.http.construct.builder.HttpProxyBuilder;
 import play.*;
+import play.Logger;
 import play.mvc.*;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.logging.*;
 
 import models.*;
 import plugins.MulePlugin;
@@ -103,4 +106,11 @@ public class Application extends Controller {
         sr.save();
     }
 
+    public static void listFlow(){
+        MuleRegistry registry = MulePlugin.muleRegistry;
+        Logger.debug("---");
+        for(FlowConstruct flowConstruct : registry.lookupFlowConstructs()){
+            Logger.debug(flowConstruct.toString()+" "+flowConstruct.getClass()+" "+flowConstruct.getStatistics()+" "+ flowConstruct.getLifecycleState());
+        }
+    }
 }
