@@ -5,17 +5,31 @@
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
       xmlns:pattern="http://www.mulesoft.org/schema/mule/pattern"
-      xsi:schemaLocation="
-        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-        http://www.mulesoft.org/schema/mule/pattern http://www.mulesoft.org/schema/mule/pattern/current/mule-pattern.xsd
-        http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/pattern http://www.mulesoft.org/schema/mule/pattern/current/mule-pattern.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd" version="EE-3.4.1">
 
-    <custom-transformer class="com.ggd543.esb.transformer.BeforeJsonTransformer" />
-    <custom-transformer class="com.ggd543.esb.transformer.AfterJsonTransformer"/>
+    <spring:beans>
+        <spring:import resource="spring-config.xml"/>
+    </spring:beans>
 
+    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.com.ucweb.esb.transformer.UCTransformer" doc:name="UCBeforeJsonTransformer">
+        <spring:property name="dataTransformer" ref="BeforeJsonTransformer"/>
+    </custom-transformer>
+    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.com.ucweb.esb.transformer.UCTransformer" doc:name="UCAfterJsonTransformer">
+        <spring:property name="dataTransformer" ref="AfterJsonTransformer"/>
+    </custom-transformer>
 
-    <pattern:http-proxy  name="logjson-proxy"  inboundAddress="http://10.1.45.208:7070/logjson" outboundAddress="http://10.1.45.208:900/logjson">
+    <byte-array-to-string-transformer name="byte-to-string"/>
+    <string-to-byte-array-transformer name="string-to-byte"/>
+
+    <pattern:http-proxy name="logjson-proxy" transformer-refs="byte-to-string UCBeforeJsonTransformer"
+                        responseTransformer-refs="byte-to-string UCAfterJsonTransformer"
+                        inboundAddress="http://10.1.45.208:7070/logjson"
+                        outboundAddress="http://10.1.45.208:9000/logjson">
     </pattern:http-proxy>
 
 

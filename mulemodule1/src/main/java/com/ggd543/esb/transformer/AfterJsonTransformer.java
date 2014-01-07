@@ -1,7 +1,7 @@
 package com.ggd543.esb.transformer;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.ucweb.esb.transformer.DataTransformer;
 import com.ucweb.esb.transformer.DataTransformerException;
 
@@ -18,7 +18,7 @@ import com.ucweb.esb.transformer.DataTransformerException;
 public class AfterJsonTransformer implements DataTransformer {
     @Override
     public Object doTransform(Object src, String enc) throws DataTransformerException {
-        JsonObject json = new Gson().toJsonTree(src).getAsJsonObject();
+        JsonObject json = new JsonParser().parse((String)src).getAsJsonObject();
         json.addProperty("timestamp", System.currentTimeMillis());
         return json.toString();
     }

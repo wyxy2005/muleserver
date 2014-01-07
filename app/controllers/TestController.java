@@ -3,10 +3,10 @@ package controllers;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import models.User;
 import play.Logger;
 import play.mvc.Controller;
-import sun.org.mozilla.javascript.internal.json.JsonParser;
 
 /**
  * 功能描述：
@@ -20,7 +20,7 @@ import sun.org.mozilla.javascript.internal.json.JsonParser;
  */
 public class TestController extends Controller {
     public static void logJson(String body) {
-        JsonObject json = new Gson().toJsonTree(body).getAsJsonObject();
+        JsonObject json = new JsonParser().parse(body).getAsJsonObject();
         Logger.info("receive: %s", json.toString());
         User user = new User();
         user.username = "liuyj3";

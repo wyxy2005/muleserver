@@ -1,4 +1,6 @@
-package com.ucweb.esb.transformer;
+package com.ggd543.test;
+
+import java.util.Date;
 
 /**
  * 功能描述：
@@ -8,9 +10,12 @@ package com.ucweb.esb.transformer;
  * @author <a href="mailto:liuyj3@ucweb.com">刘永健</a>
  * @version 1.0.0
  * @since 1.0.0
- * create on: 2014年01月07
+ * create on: 2014年01月06
  */
+public interface IWelcome {
+    public void printMsg(String msg);
 
-public interface DataTransformer {
-    public Object doTransform(Object src, String enc) throws DataTransformerException ;
+    public void printClass(IWelcome iw);
+
+    public void printDate(Date date);
 }

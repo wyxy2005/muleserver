@@ -7,10 +7,10 @@ require:
     - org.mule.modules -> mule-module-spring-extras 3.4.0
     - org.mule.transports -> mule-transport-vm 3.4.0
     - org.mule.transports -> mule-transport-http 3.4.0
-    - org.mule -> mule-core 3.4.0 test
     - org.mule.modules -> mule-module-scripting 3.4.0
     - org.mule.patterns -> mule-pattern-core 3.4.0
-
+#    - play -> scala 0.9.1
+    - org.xeustechnologies -> jcl-core  2.5
 # Default repositories, used for all projects
 #repositories:
 #

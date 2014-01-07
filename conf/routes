@@ -8,6 +8,8 @@ GET     /services       Application.serviceForm
 GET     /registry-service   Application.registryForm
 POST    /registry-service   Application.registryForm
 
+POST     /logjson        TestController.logJson
+
 GET     /json       Application.outputJSON
 
 # Ignore favicon requests

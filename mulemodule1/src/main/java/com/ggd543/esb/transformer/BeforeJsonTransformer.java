@@ -16,7 +16,6 @@ import com.ucweb.esb.transformer.DataTransformerException;
  */
 public class BeforeJsonTransformer implements DataTransformer {
 
-
     @Override
     public Object doTransform(Object src, String enc) throws DataTransformerException {
         JsonObject json = new JsonObject();
