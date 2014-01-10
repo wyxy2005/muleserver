@@ -1,0 +1,12 @@
+<services>
+<service name="logjson" service-url="http://10.1.45.208:9000/logjson">
+    <before-transformer name="BeforeJsonTransformer"/>
+    <after-transformer name="AfterJsonTransformer"/>
+
+</service>
+
+<service name="getjson" service-url="http://10.1.45.208:900/getjson"/>
+
+
+
+</services>

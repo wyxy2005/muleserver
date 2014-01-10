@@ -9,8 +9,15 @@ GET     /registry-service   Application.registryForm
 POST    /registry-service   Application.registryForm
 
 POST     /logjson        TestController.logJson
+GET     /getjson        TestController.getJson
 
 GET     /json       Application.outputJSON
+
+GET     /register/outputok      Register.OutputOK
+GET     /register/services/list     Register.listService
+POST    /register/services   Register.deployService
+GET     /register/services  Register.deployService
+
 
 # Ignore favicon requests
 GET     /favicon.ico                            404

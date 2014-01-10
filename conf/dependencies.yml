@@ -2,6 +2,7 @@
 
 require:
     - play
+#    - play -> scala 0.9.1
     - org.mule -> mule-core 3.4.0
     - org.mule.modules -> mule-module-spring-config 3.4.0
     - org.mule.modules -> mule-module-spring-extras 3.4.0
@@ -9,8 +10,10 @@ require:
     - org.mule.transports -> mule-transport-http 3.4.0
     - org.mule.modules -> mule-module-scripting 3.4.0
     - org.mule.patterns -> mule-pattern-core 3.4.0
-#    - play -> scala 0.9.1
     - org.xeustechnologies -> jcl-core  2.5
+    - de.schlichtherle.truezip ->  truezip-file 7.7.5
+    - de.schlichtherle.truezip ->  truezip-path 7.7.5
+    - de.schlichtherle.truezip ->  truezip-kernel 7.7.5
 # Default repositories, used for all projects
 #repositories:
 #

@@ -14,6 +14,4 @@ public class ServiceRegistry extends Model {
     public String name ;
     public String toUrl;
     public String  fromUrl;
-
-
 }

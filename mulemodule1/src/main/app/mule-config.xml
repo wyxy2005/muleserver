@@ -6,7 +6,9 @@
       xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
       xmlns:pattern="http://www.mulesoft.org/schema/mule/pattern"
       xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:jersey="http://www.mulesoft.org/schema/mule/jersey"
       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+      http://www.mulesoft.org/schema/mule/jersey http://www.mulesoft.org/schema/mule/jersey/current/mule-jersey.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/pattern http://www.mulesoft.org/schema/mule/pattern/current/mule-pattern.xsd
@@ -16,10 +18,10 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         <spring:import resource="spring-config.xml"/>
     </spring:beans>
 
-    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.com.ucweb.esb.transformer.UCTransformer" doc:name="UCBeforeJsonTransformer">
+    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer" doc:name="UCBeforeJsonTransformer">
         <spring:property name="dataTransformer" ref="BeforeJsonTransformer"/>
     </custom-transformer>
-    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.com.ucweb.esb.transformer.UCTransformer" doc:name="UCAfterJsonTransformer">
+    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer" doc:name="UCAfterJsonTransformer">
         <spring:property name="dataTransformer" ref="AfterJsonTransformer"/>
     </custom-transformer>
 
@@ -32,5 +34,12 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
                         outboundAddress="http://10.1.45.208:9000/logjson">
     </pattern:http-proxy>
 
+    <flow name="HelloWorld">
+        <inbound-endpoint address="http://localhost:8072/jersey"/>
+        <echo-component></echo-component>
+        <jersey:resources>
+            <component class="com.ucweb.esb.webservice.HelloWorldResource"/>
+        </jersey:resources>
+    </flow>
 
 </mule>

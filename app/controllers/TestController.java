@@ -1,11 +1,14 @@
 package controllers;
 
+import java.net.MalformedURLException;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import models.User;
 import play.Logger;
+import play.libs.WS;
 import play.mvc.Controller;
 
 /**
@@ -19,12 +22,22 @@ import play.mvc.Controller;
  * create on: 2014年01月07
  */
 public class TestController extends Controller {
-    public static void logJson(String body) {
-        JsonObject json = new JsonParser().parse(body).getAsJsonObject();
-        Logger.info("receive: %s", json.toString());
+    private static User getUser(){
         User user = new User();
         user.username = "liuyj3";
         user.email = "liuyj3@ucweb.com";
+        return  user;
+    }
+
+    public static void logJson(String body) {
+        JsonObject json = new JsonParser().parse(body).getAsJsonObject();
+        Logger.info("receive: %s", json.toString());
+        User user = getUser();
+        renderJSON(user);
+    }
+
+    public static void getJson(){
+        User user = getUser();
         renderJSON(user);
     }
 

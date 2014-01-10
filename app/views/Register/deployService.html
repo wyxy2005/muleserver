@@ -1,0 +1,19 @@
+#{extends 'main.html' /}
+#{set title:'Service Registry Form' /}
+
+<form action="@{Register.deployService()}" method="post" enctype="multipart/form-data">
+    <fieldset>
+        <div>
+            <label for="name" >服务名</label>
+            <input type="text" name="name" id="name" value="${name}"/>
+        </div>
+        <div>
+            <label for="zipFile">上传文件包(zip格式）</label>
+            <input type="file" id="zipFile" name="zipFile">
+        </div>
+        <div>
+            <input type="submit" value="提交">
+        </div>
+    </fieldset>
+
+</form>

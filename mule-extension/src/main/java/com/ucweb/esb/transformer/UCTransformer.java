@@ -15,7 +15,12 @@ import org.mule.transformer.AbstractTransformer;
  */
 public class UCTransformer extends AbstractTransformer {
 
-    private DataTransformer dataTransformer;
+    private DataTransformer dataTransformer = new DataTransformer(){
+        @Override
+        public Object doTransform(Object o, String s) throws DataTransformerException {
+            return o;
+        }
+    };
 
     @Override
     protected Object doTransform(Object src, String enc) throws TransformerException {
