@@ -3,3 +3,7 @@
 /logs
 /mulemodule1/.idea
 /mulemodule1/mulemodule1.iml
+/mule-extension/target
+/mulemodule1/target
+/mulemodule1/.project
+/mulemodule1/.classpath
