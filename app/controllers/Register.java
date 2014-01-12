@@ -101,11 +101,26 @@ public class Register extends Controller {
         modifyMuleConfigDescriptor(muleConfigDescriptor, serviceDescriptor, hasSpringMuleConfig);
 
         File destFile = Play.getFile("data/" + zipFile.getName());
-        ZipOutputStream zos = copy(zipFile, destFile);
+        try(ZipOutputStream zos = copy(zipFile, destFile)){
+            addMuleConfigDescriptorToZipFile(zos, muleConfigDescriptor);
 
-        addMuleConfigDescriptorToZipFile(zos, muleConfigDescriptor);
+            addMQGroovyFileToZipFile(zos, Play.getFile("conf/mq.groovy"));
 
-        FileUtils.copyFile(destFile, new File(MULE_HOME, destFile.getName()));
+        }
+        String baseFileName = destFile.getName().substring(0,destFile.getName().lastIndexOf(".zip"));
+        FileUtils.deleteQuietly(new File(MULE_HOME, baseFileName + "-anchor.txt"));
+        FileUtils.copyFile(destFile, new File(MULE_HOME, baseFileName+".zip"));
+    }
+
+    private static void addMQGroovyFileToZipFile(ZipOutputStream zos, File file) throws IOException {
+        try (FileInputStream fis = new  FileInputStream(file)){
+            ZipEntry zipEntry = new ZipEntry("classes/"+file.getName());
+            zos.putNextEntry(zipEntry);
+            IOUtils.copy(fis,  zos);
+        } finally {
+            zos.closeEntry();
+
+        }
     }
 
     private static ZipOutputStream copy(File zipFile, File destFile) throws IOException {
@@ -137,9 +152,7 @@ public class Register extends Controller {
             zos.write(muleConfigDescriptor.asXML().getBytes(muleConfigDescriptor.getXMLEncoding()));
         } finally {
             zos.closeEntry();
-            IOUtils.closeQuietly(zos);
         }
-
     }
 
 
@@ -148,32 +161,12 @@ public class Register extends Controller {
         Logger.debug("%s service node", nodeList.size());
         Map<String, String> transformerClassNames = new HashMap<String, String>();
         for (Node node : nodeList) {
-            String name = node.valueOf("@name");
-            String url = node.valueOf("@service-url");
-            Node beforeTransformerNode = node.selectSingleNode("./before-transformer");
-            String beforeTransformerName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@name");
-            String beforeTransformerClassName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@class");
-            Node afterTransformerNode = node.selectSingleNode("./after-transformer");
-            String afterTransformerName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@name");
-            String afterTransformerClassName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@class");
-            Logger.debug("name %s , service-url: %s beforeTransformerName : %s  beforeTransformerzClassName: %s"
-                    , name, url, beforeTransformerName, beforeTransformerClassName);
-
-            if (StringUtils.isNotEmpty(beforeTransformerName)) {
-                addCustomTransformer(beforeTransformerName, muleConfigDescriptor);
-                if (StringUtils.isNotEmpty(beforeTransformerClassName)) {
-                    transformerClassNames.put(beforeTransformerName, beforeTransformerClassName);
-                }
+            String type = node.valueOf("@type");
+            if (StringUtils.equalsIgnoreCase("mq", type)) {
+                parseMQFlow(node, muleConfigDescriptor);
+            } else {
+                parseServiceFlow(node, muleConfigDescriptor,  transformerClassNames);
             }
-
-            if (StringUtils.isNotEmpty(afterTransformerName)) {
-                addCustomTransformer(afterTransformerName, muleConfigDescriptor);
-                if (StringUtils.isNotEmpty(afterTransformerClassName)) {
-                    transformerClassNames.put(afterTransformerName, afterTransformerClassName);
-                }
-            }
-
-            addPatternProxy(name, url, beforeTransformerName, afterTransformerName, muleConfigDescriptor);
         }
 
         if (!hasSpringMuleConfig) {
@@ -185,6 +178,70 @@ public class Register extends Controller {
         Logger.info("generate mule-config.xml");
 
         Logger.info(muleConfigDescriptor.asXML());
+    }
+
+    private static void parseMQFlow(Node node, Document muleConfigDescriptor) {
+        String name = node.valueOf("@name");
+        String topicName = node.valueOf("@topic");
+        String address = MULE_SERVICE_URL +  node.valueOf("@path");
+        String method = node.valueOf("@method");
+        Namespace ns = muleConfigDescriptor.getRootElement().getNamespace();
+        Namespace httpNS = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("http");
+        Namespace jmsNS = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("jms");
+        Element httpInboundEndpointElement = DocumentHelper.createElement(new QName("inbound-endpoint", httpNS))
+                .addAttribute("address", address);
+        Element flowElement = DocumentHelper.createElement(new QName("flow",ns)).addAttribute("name", name);
+        muleConfigDescriptor.getRootElement().add(flowElement);
+        flowElement.add(httpInboundEndpointElement);
+        if (StringUtils.equalsIgnoreCase("post", method)) {
+            Element filterElement = DocumentHelper.createElement(new QName("expression-filter",ns)).addAttribute("expression", "#[message.inboundProperties['http.method'] == 'POST']");
+            flowElement.add(filterElement);
+            flowElement.add(DocumentHelper.createElement(new QName("byte-array-to-string-transformer", ns)));
+            Element jmsOutboundEndpointElement = DocumentHelper.createElement(new QName("outbound-endpoint", jmsNS))
+                    .addAttribute("topic", "VirtualTopic." + topicName).addAttribute("connector-ref", "jmsConnector");
+            flowElement.add(jmsOutboundEndpointElement);
+        } else {
+            Element filterElement = DocumentHelper.createElement(new QName("expression-filter",ns)).addAttribute("expression", "#[message.inboundProperties['http.method'] == 'GET']");
+            flowElement.add(filterElement);
+            Namespace scriptingNS = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("scripting");
+            Element scriptingComponentElement = DocumentHelper.createElement(new QName("component", scriptingNS));
+            Element scriptElement = DocumentHelper.createElement(new QName("script", scriptingNS)).addAttribute("engine", "groovy")
+                    .addAttribute("file", "mq.groovy");
+            Element hostNamePropElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "hostName").addAttribute("value", "queue:" + "VirtualTopic." + topicName);
+            scriptElement.add(hostNamePropElement);
+            Element connectorRefElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "connectorRef").addAttribute("value", "jmsConnector");
+            scriptElement.add(connectorRefElement);
+            scriptingComponentElement.add(scriptElement);
+            flowElement.add(scriptingComponentElement);
+        }
+    }
+
+    private static void parseServiceFlow(Node node, Document muleConfigDescriptor, Map<String, String> transformerClassNames) {
+        String name = node.valueOf("@name");
+        String url = MULE_SERVICE_URL + node.valueOf("@path");
+        Node beforeTransformerNode = node.selectSingleNode("./before-transformer");
+        String beforeTransformerName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@name");
+        String beforeTransformerClassName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@class");
+        Node afterTransformerNode = node.selectSingleNode("./after-transformer");
+        String afterTransformerName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@name");
+        String afterTransformerClassName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@class");
+        Logger.debug("name %s , address: %s beforeTransformerName : %s  beforeTransformerzClassName: %s"
+                , name, url, beforeTransformerName, beforeTransformerClassName);
+
+        if (StringUtils.isNotEmpty(beforeTransformerName)) {
+            addCustomTransformer(beforeTransformerName, muleConfigDescriptor);
+            if (StringUtils.isNotEmpty(beforeTransformerClassName)) {
+                transformerClassNames.put(beforeTransformerName, beforeTransformerClassName);
+            }
+        }
+
+        if (StringUtils.isNotEmpty(afterTransformerName)) {
+            addCustomTransformer(afterTransformerName, muleConfigDescriptor);
+            if (StringUtils.isNotEmpty(afterTransformerClassName)) {
+                transformerClassNames.put(afterTransformerName, afterTransformerClassName);
+            }
+        }
+        addPatternProxy(name, url, beforeTransformerName, afterTransformerName, muleConfigDescriptor);
     }
 
     private static void addSpringBean(Document muleConfigDescriptor, Map<String, String> transformerClassNames) {

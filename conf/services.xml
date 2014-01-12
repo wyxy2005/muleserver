@@ -1,12 +1,18 @@
 <services>
-<service name="logjson" service-url="http://10.1.45.208:9000/logjson">
-    <before-transformer name="BeforeJsonTransformer"/>
-    <after-transformer name="AfterJsonTransformer"/>
+    <service name="logjson" address="http://10.1.45.208:9000/logjson">
+        <before-transformer name="BeforeJsonTransformer"/>
+        <after-transformer name="AfterJsonTransformer"/>
 
-</service>
+    </service>
 
-<service name="getjson" service-url="http://10.1.45.208:900/getjson"/>
+    <service name="getjson" address="http://10.1.45.208:900/getjson"/>
 
+    <service name="finance-send" type="mq" topic="finance" path="/topic/send" method="post"/>
 
+    <service name="finance-receive-1" type="mq" topic="finance" path="/topic/receive1" />
+
+    <service name="finance-receive-2" type="mq" topic="finance" path="/topic/receive2" />
+    <service name="finance-receive-3" type="mq" topic="finance" path="/topic/receive3" />
+    <service name="finance-receive-4" type="mq" topic="finance" path="/topic/receive4" />
 
 </services>

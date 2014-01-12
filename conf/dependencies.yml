@@ -9,6 +9,7 @@ require:
     - org.mule.transports -> mule-transport-vm 3.4.0
     - org.mule.transports -> mule-transport-http 3.4.0
     - org.mule.modules -> mule-module-scripting 3.4.0
+    - org.mule.transports -> mule-transport-jms 3.4.0
     - org.mule.patterns -> mule-pattern-core 3.4.0
     - org.xeustechnologies -> jcl-core  2.5
     - de.schlichtherle.truezip ->  truezip-file 7.7.5

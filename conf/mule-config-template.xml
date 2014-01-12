@@ -4,13 +4,24 @@
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
       xmlns:pattern="http://www.mulesoft.org/schema/mule/pattern"
       xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+   http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/3.1/mule-jms.xsd
 http://www.mulesoft.org/schema/mule/pattern http://www.mulesoft.org/schema/mule/pattern/current/mule-pattern.xsd
 http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd" version="3.4.1">
+
+
+    <jms:activemq-connector name="jmsConnector" persistentDelivery="true"  durable="true"
+                            brokerURL="tcp://localhost:61616" doc:name="Active MQ" clientId="1"/>
+
+    <jms:activemq-xa-connector name="jmsXAConnector" persistentDelivery="true" durable="true"
+                               brokerURL="tcp://localhost:61616" doc:name="Active MQ"/>
 
     <spring:beans>
         <!--<spring:import resource="spring-mule-config.xml"/>-->
@@ -31,7 +42,6 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
     <!--inboundAddress="http://10.1.45.208:7070/logjson"-->
     <!--outboundAddress="http://10.1.45.208:9000/logjson">-->
     <!--</pattern:http-proxy>-->
-
 
 
 </mule>
