@@ -2,6 +2,11 @@ package controllers;
 
 import com.google.gson.JsonObject;
 import org.apache.commons.lang.StringUtils;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Node;
+import org.dom4j.io.SAXReader;
 import org.mule.MessageExchangePattern;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
@@ -19,6 +24,10 @@ import play.*;
 import play.Logger;
 import play.mvc.*;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
@@ -29,6 +38,26 @@ import plugins.MulePlugin;
 
 public class Application extends Controller {
     private static String MULE_SERVICE_URL = Play.configuration.getProperty("mule.service.url", "http://localhost:9999");
+
+    public static void selectNodes() throws DocumentException, IOException {
+        File file = Play.getFile("conf/mule-config-template.xml");
+        SAXReader reader = new SAXReader();
+        try(FileInputStream fis = new FileInputStream(file)){
+            Document doc = reader.read(fis);
+            _selectNodes(doc);
+        }
+    }
+
+    private static void _selectNodes(Document doc) {
+        List<Node> nodeList = doc.selectNodes("//activemq-connector");
+        System.out.println(nodeList.size());
+        nodeList = doc.selectNodes("//jms:activemq-connector");
+        System.out.println(nodeList.size());
+    }
+
+    public static void uuid(){
+        renderText(UUID.randomUUID().toString());
+    }
 
     public static void outputJSON(){
         JsonObject json = new JsonObject();

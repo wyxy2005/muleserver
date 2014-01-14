@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -30,6 +31,7 @@ import play.mvc.Controller;
  */
 public class Register extends Controller {
 
+    private static Document JMSConnectorClientId;
 
     public static void OutputOK() {
         ok();
@@ -101,25 +103,27 @@ public class Register extends Controller {
         modifyMuleConfigDescriptor(muleConfigDescriptor, serviceDescriptor, hasSpringMuleConfig);
 
         File destFile = Play.getFile("data/" + zipFile.getName());
-        try(ZipOutputStream zos = copy(zipFile, destFile)){
+        try (ZipOutputStream zos = copy(zipFile, destFile)) {
             addMuleConfigDescriptorToZipFile(zos, muleConfigDescriptor);
 
             addMQGroovyFileToZipFile(zos, Play.getFile("conf/mq.groovy"));
-
         }
-        String baseFileName = destFile.getName().substring(0,destFile.getName().lastIndexOf(".zip"));
+        String baseFileName = destFile.getName().substring(0, destFile.getName().lastIndexOf(".zip"));
         FileUtils.deleteQuietly(new File(MULE_HOME, baseFileName + "-anchor.txt"));
-        FileUtils.copyFile(destFile, new File(MULE_HOME, baseFileName+".zip"));
+        FileUtils.copyFile(destFile, new File(MULE_HOME, baseFileName + ".zip"));
     }
 
     private static void addMQGroovyFileToZipFile(ZipOutputStream zos, File file) throws IOException {
-        try (FileInputStream fis = new  FileInputStream(file)){
-            ZipEntry zipEntry = new ZipEntry("classes/"+file.getName());
+        ZipEntry zipEntry = new ZipEntry("classes/");
+        zipEntry.setTime(System.currentTimeMillis());
+        zos.closeEntry();
+        try (FileInputStream fis = new FileInputStream(file)) {
             zos.putNextEntry(zipEntry);
-            IOUtils.copy(fis,  zos);
+            zipEntry = new ZipEntry("classes/" + file.getName());
+            zos.putNextEntry(zipEntry);
+            IOUtils.copy(fis, zos);
         } finally {
             zos.closeEntry();
-
         }
     }
 
@@ -160,12 +164,14 @@ public class Register extends Controller {
         List<Node> nodeList = serviceDescriptor.selectNodes("//service");
         Logger.debug("%s service node", nodeList.size());
         Map<String, String> transformerClassNames = new HashMap<String, String>();
+        int id = 0;
         for (Node node : nodeList) {
             String type = node.valueOf("@type");
             if (StringUtils.equalsIgnoreCase("mq", type)) {
-                parseMQFlow(node, muleConfigDescriptor);
+                parseMQFlow(node, muleConfigDescriptor, id);
+                id += 1;
             } else {
-                parseServiceFlow(node, muleConfigDescriptor,  transformerClassNames);
+                parseServiceFlow(node, muleConfigDescriptor, transformerClassNames);
             }
         }
 
@@ -175,39 +181,41 @@ public class Register extends Controller {
             addSpringImport(muleConfigDescriptor);
         }
 
+       generateJMSConnectorClientId(muleConfigDescriptor);
+
         Logger.info("generate mule-config.xml");
 
         Logger.info(muleConfigDescriptor.asXML());
     }
 
-    private static void parseMQFlow(Node node, Document muleConfigDescriptor) {
+    private static void parseMQFlow(Node node, Document muleConfigDescriptor, int id) {
         String name = node.valueOf("@name");
         String topicName = node.valueOf("@topic");
-        String address = MULE_SERVICE_URL +  node.valueOf("@path");
+        String address = MULE_SERVICE_URL + node.valueOf("@path");
         String method = node.valueOf("@method");
         Namespace ns = muleConfigDescriptor.getRootElement().getNamespace();
         Namespace httpNS = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("http");
         Namespace jmsNS = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("jms");
         Element httpInboundEndpointElement = DocumentHelper.createElement(new QName("inbound-endpoint", httpNS))
                 .addAttribute("address", address);
-        Element flowElement = DocumentHelper.createElement(new QName("flow",ns)).addAttribute("name", name);
+        Element flowElement = DocumentHelper.createElement(new QName("flow", ns)).addAttribute("name", name);
         muleConfigDescriptor.getRootElement().add(flowElement);
         flowElement.add(httpInboundEndpointElement);
         if (StringUtils.equalsIgnoreCase("post", method)) {
-            Element filterElement = DocumentHelper.createElement(new QName("expression-filter",ns)).addAttribute("expression", "#[message.inboundProperties['http.method'] == 'POST']");
+            Element filterElement = DocumentHelper.createElement(new QName("expression-filter", ns)).addAttribute("expression", "#[message.inboundProperties['http.method'] == 'POST']");
             flowElement.add(filterElement);
             flowElement.add(DocumentHelper.createElement(new QName("byte-array-to-string-transformer", ns)));
             Element jmsOutboundEndpointElement = DocumentHelper.createElement(new QName("outbound-endpoint", jmsNS))
                     .addAttribute("topic", "VirtualTopic." + topicName).addAttribute("connector-ref", "jmsConnector");
             flowElement.add(jmsOutboundEndpointElement);
         } else {
-            Element filterElement = DocumentHelper.createElement(new QName("expression-filter",ns)).addAttribute("expression", "#[message.inboundProperties['http.method'] == 'GET']");
+            Element filterElement = DocumentHelper.createElement(new QName("expression-filter", ns)).addAttribute("expression", "#[message.inboundProperties['http.method'] == 'GET']");
             flowElement.add(filterElement);
             Namespace scriptingNS = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("scripting");
             Element scriptingComponentElement = DocumentHelper.createElement(new QName("component", scriptingNS));
             Element scriptElement = DocumentHelper.createElement(new QName("script", scriptingNS)).addAttribute("engine", "groovy")
                     .addAttribute("file", "mq.groovy");
-            Element hostNamePropElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "hostName").addAttribute("value", "queue:" + "VirtualTopic." + topicName);
+            Element hostNamePropElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "hostName").addAttribute("value", "queue:Consumer." +id+ ".VirtualTopic." + topicName);
             scriptElement.add(hostNamePropElement);
             Element connectorRefElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "connectorRef").addAttribute("value", "jmsConnector");
             scriptElement.add(connectorRefElement);
@@ -286,6 +294,19 @@ public class Register extends Controller {
                 .addAttribute("ref", transformerName);
         muleConfigDescriptor.getRootElement().add(transformerElement);
 //        Logger.debug(muleConfigDescriptor.asXML())
+    }
+
+    private  static void generateJMSConnectorClientId(Document muleConfigDescriptor) {
+        for (Object node :  muleConfigDescriptor.selectNodes("//jms:activemq-xa-connector")) {
+            System.out.println();
+            ((Element) node).addAttribute("clientId", UUID.randomUUID().toString());
+            System.out.println(((Node) node).asXML());
+            System.out.println();
+        }
+
+        for (Object node : muleConfigDescriptor.selectNodes("//jms:activemq-connector")) {
+            ((Element) node).addAttribute("clientId", UUID.randomUUID().toString());
+        }
     }
 
 }

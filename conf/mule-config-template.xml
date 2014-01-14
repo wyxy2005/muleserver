@@ -18,9 +18,9 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 
 
     <jms:activemq-connector name="jmsConnector" persistentDelivery="true"  durable="true"
-                            brokerURL="tcp://localhost:61616" doc:name="Active MQ" clientId="1"/>
+                            brokerURL="tcp://localhost:61616" doc:name="Active MQ" />
 
-    <jms:activemq-xa-connector name="jmsXAConnector" persistentDelivery="true" durable="true"
+    <jms:activemq-xa-connector name="jmsXAConnector"
                                brokerURL="tcp://localhost:61616" doc:name="Active MQ"/>
 
     <spring:beans>
