@@ -226,15 +226,17 @@ public class Register extends Controller {
 
     private static void parseServiceFlow(Node node, Document muleConfigDescriptor, Map<String, String> transformerClassNames) {
         String name = node.valueOf("@name");
-        String url = MULE_SERVICE_URL + node.valueOf("@path");
+        String path =  node.valueOf("@path");
+        String targetUrl = node.valueOf("@service-url");
+
         Node beforeTransformerNode = node.selectSingleNode("./before-transformer");
         String beforeTransformerName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@name");
         String beforeTransformerClassName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@class");
         Node afterTransformerNode = node.selectSingleNode("./after-transformer");
         String afterTransformerName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@name");
         String afterTransformerClassName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@class");
-        Logger.debug("name %s , address: %s beforeTransformerName : %s  beforeTransformerzClassName: %s"
-                , name, url, beforeTransformerName, beforeTransformerClassName);
+        Logger.debug("name %s , path: %s beforeTransformerName : %s  beforeTransformerzClassName: %s"
+                , name, path, beforeTransformerName, beforeTransformerClassName);
 
         if (StringUtils.isNotEmpty(beforeTransformerName)) {
             addCustomTransformer(beforeTransformerName, muleConfigDescriptor);
@@ -249,7 +251,7 @@ public class Register extends Controller {
                 transformerClassNames.put(afterTransformerName, afterTransformerClassName);
             }
         }
-        addPatternProxy(name, url, beforeTransformerName, afterTransformerName, muleConfigDescriptor);
+        addPatternProxy(name, path,targetUrl,  beforeTransformerName, afterTransformerName, muleConfigDescriptor);
     }
 
     private static void addSpringBean(Document muleConfigDescriptor, Map<String, String> transformerClassNames) {
@@ -269,16 +271,16 @@ public class Register extends Controller {
         ((Element) muleConfigDescriptor.selectSingleNode("//spring:beans")).add(e);
     }
 
-    private static void addPatternProxy(String name, String url, String beforeTransformerName, String afterTransformerName, Document muleConfigDescriptor) {
+    private static void addPatternProxy(String name, String path, String targetUrl, String beforeTransformerName, String afterTransformerName, Document muleConfigDescriptor) {
         String transformerRefNames = "byte-to-string " + (beforeTransformerName == null ? "" : "UC" + beforeTransformerName);
         String responseTransformerRefNames = "byte-to-string " + (afterTransformerName == null ? "" : "UC" + afterTransformerName);
-        String inboundAddress = MULE_SERVICE_URL + "/" + name;
+        String inboundAddress = MULE_SERVICE_URL + "/" + path;
         Namespace patternNamespace = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("pattern");
         Element patternElement = DocumentHelper.createElement(new QName("http-proxy", patternNamespace))
-                .addAttribute("name", name + "-pattern")
+                .addAttribute("name", name)
                 .addAttribute("transformer-refs", transformerRefNames)
                 .addAttribute("responseTransformer-refs", responseTransformerRefNames).addAttribute("inboundAddress", inboundAddress)
-                .addAttribute("outboundAddress", url);
+                .addAttribute("outboundAddress",targetUrl);
         muleConfigDescriptor.getRootElement().add(patternElement);
     }
 

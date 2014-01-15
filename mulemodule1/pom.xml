@@ -28,7 +28,11 @@
             <version>1.6</version>
         </dependency>
 
-
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.2.5</version>
+        </dependency>
 
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -136,28 +140,17 @@
                 <extensions>true</extensions>
                 <configuration>
                     <copyToAppsDirectory>true</copyToAppsDirectory>
-                    <inclusions>
-                        <inclusion>
+
+                    <exclusions>
+                        <exclusion>
                             <groupId>org.apache.activemq</groupId>
                             <artifactId>activemq-client</artifactId>
-                        </inclusion>
-                        <inclusion>
-                            <groupId>org.mule.transports</groupId>
-                            <artifactId>mule-transport-http</artifactId>
-                        </inclusion>
-                        <inclusion>
-                            <groupId>org.mule.transports</groupId>
-                            <artifactId>mule-transport-jms</artifactId>
-                        </inclusion>
-                        <inclusion>
-                            <groupId>com.google.code.gson</groupId>
-                            <artifactId>gson</artifactId>
-                        </inclusion>
-                        <inclusion>
-                            <groupId>com.ucweb.esb</groupId>
-                            <artifactId>mule-extension</artifactId>
-                        </inclusion>
-                    </inclusions>
+                        </exclusion>
+                        <exclusion>
+                            <groupId>com.sun.jersey</groupId>
+                            <artifactId>jersey-client</artifactId>
+                        </exclusion>
+                    </exclusions>
                 </configuration>
             </plugin>
         </plugins>

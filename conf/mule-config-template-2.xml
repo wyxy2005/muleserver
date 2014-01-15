@@ -24,7 +24,6 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
     <jms:activemq-xa-connector name="jmsXAConnector"
                                brokerURL="tcp://localhost:61616" doc:name="Active MQ"/>
 
-
     <spring:beans>
         <!--<spring:import resource="spring-mule-config.xml"/>-->
     </spring:beans>
@@ -44,6 +43,45 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
     <!--inboundAddress="http://10.1.45.208:7070/logjson"-->
     <!--outboundAddress="http://10.1.45.208:9000/logjson">-->
     <!--</pattern:http-proxy>-->
+
+    <flow name="beforeProxy1">
+        <http:inbound-endpoint address="http://localhost:8079/baidu"/>
+        <scripting:component>
+            <scripting:script engine="groovy">
+                println(new java.util.Date());
+            </scripting:script>
+        </scripting:component>
+        <vm:outbound-endpoint exchange-pattern="request-response" address="vm://proxy1"/>
+        <copy-properties propertyName="*"/>
+    </flow>
+
+    <pattern:bridge name="baiduProxy1" exchange-pattern="request-response"
+                    inboundAddress="vm://proxy1" outboundAddress="http://www.baidu.com"/>
+
+    <pattern:bridge name="baiduProxy2" exchange-pattern="request-response"
+                    inboundAddress="http://localhost:8079/baidu/proxy" outboundAddress="http://www.baidu.com"/>
+
+    <flow name="beforeProxy2">
+        <http:inbound-endpoint address="http://localhost:8079/baidu/proxy/2"/>
+        <scripting:component>
+            <scripting:script engine="groovy">
+                println(new java.util.Date());
+            </scripting:script>
+        </scripting:component>
+        <http:outbound-endpoint address="http://localhost:8079/baidu/proxy2"/>
+        <copy-properties propertyName="*"/>
+    </flow>
+
+    <pattern:http-proxy name="baiduProxy3" inboundAddress="http://localhost:8079/baidu/proxy2"
+                        outboundAddress="http://www.baidu.com"/>
+
+    <flow name="baiduProxy66">
+        <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8079/baidu/proxy66"/>
+        <echo-component></echo-component>
+        <copy-properties propertyName="*"/>
+        <http:outbound-endpoint
+                address="http://127.0.0.1:9000/action/invoke?name=#[message.inboundProperties['http.method']]"/>
+    </flow>
 
 
 </mule>

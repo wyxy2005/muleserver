@@ -10,6 +10,8 @@ POST    /registry-service   Application.registryForm
 
 POST     /logjson        TestController.logJson
 GET     /getjson        TestController.getJson
+*       /action/invoke  TestController.invokeAction
+GET     /service/check  TestController.checkService
 
 GET     /json       Application.outputJSON
 

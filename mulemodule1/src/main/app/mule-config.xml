@@ -4,24 +4,31 @@
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xmlns:http="http://www.mulesoft.org/schema/mule/http"
       xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
       xmlns:pattern="http://www.mulesoft.org/schema/mule/pattern"
       xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
       xmlns:jersey="http://www.mulesoft.org/schema/mule/jersey"
       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-      http://www.mulesoft.org/schema/mule/jersey http://www.mulesoft.org/schema/mule/jersey/current/mule-jersey.xsd
+   http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/jersey http://www.mulesoft.org/schema/mule/jersey/current/mule-jersey.xsd
 http://www.mulesoft.org/schema/mule/pattern http://www.mulesoft.org/schema/mule/pattern/current/mule-pattern.xsd
-http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd" version="EE-3.4.1">
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd"
+      version="3.4.1">
 
     <spring:beans>
         <spring:import resource="spring-config.xml"/>
     </spring:beans>
 
-    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer" doc:name="UCBeforeJsonTransformer">
+    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer"
+                        doc:name="UCBeforeJsonTransformer">
         <spring:property name="dataTransformer" ref="BeforeJsonTransformer"/>
     </custom-transformer>
-    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer" doc:name="UCAfterJsonTransformer">
+    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer"
+                        doc:name="UCAfterJsonTransformer">
         <spring:property name="dataTransformer" ref="AfterJsonTransformer"/>
     </custom-transformer>
 
@@ -40,6 +47,85 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         <jersey:resources>
             <component class="com.ucweb.esb.webservice.HelloWorldResource"/>
         </jersey:resources>
+    </flow>
+
+    <custom-transformer class="com.ggd543.esb.transformer.BeforeActionTransformer" name="BeforeActionTransformer"/>
+    <custom-transformer class="com.ggd543.esb.transformer.AfterActionTransformer" name="AfterActionTransformer"/>
+
+
+    <interceptor-stack name="Checker">
+        <!--<custom-interceptor class="com.ggd543.esb.interceptor.PermissionChecker"/>-->
+        <custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>
+    </interceptor-stack>
+
+    <flow name="test-flow-1">
+        <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy1">
+        </http:inbound-endpoint>
+        <echo-component></echo-component>
+        <!--<component class="com.ggd543.esb.component.ServiceMonitor"/>-->
+        <!--<custom-interceptor class="com.ggd543.esb.interceptor.PermissionChecker"/>-->
+        <component>
+            <interceptor-stack ref="Checker"/>
+            <prototype-object class="com.ggd543.esb.component.ServiceMonitor"/>
+        </component>
+        <copy-properties propertyName="*"/>
+        <custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>
+        <http:outbound-endpoint exchange-pattern="request-response"
+                                address="http://127.0.0.1:9000/action/invoke?name=#[message.inboundProperties['http.method']]">
+            <transformer ref="BeforeActionTransformer"/>
+            <response>
+                <byte-array-to-string-transformer/>
+                <transformer ref="AfterActionTransformer"/>
+            </response>
+        </http:outbound-endpoint>
+
+    </flow>
+
+    <flow name="test-flow-2">
+        <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy2">
+        </http:inbound-endpoint>
+        <!--<echo-component></echo-component>-->
+        <!--<custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>-->
+        <scripting:component>
+            <scripting:script engine="groovy" file="service_monitor.groovy">
+                <property key="serviceMonitorUrl" value="http://localhost:9000/service/check"/>
+            </scripting:script>
+        </scripting:component>
+        <http:outbound-endpoint exchange-pattern="request-response"
+                                address="http://127.0.0.1:9000/action/invoke?#[message.inboundProperties['http.query.params']]">
+            <byte-array-to-string-transformer/>
+            <transformer ref="BeforeActionTransformer"/>
+            <copy-properties propertyName="http.method"/>
+            <!--<copy-properties propertyName="http.*"/>-->
+            <response>
+                <byte-array-to-string-transformer/>
+                <transformer ref="AfterActionTransformer"/>
+            </response>
+        </http:outbound-endpoint>
+        <choice-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.BeforeException)]">
+                <scripting:component>
+                    <scripting:script engine="groovy">
+                        return "an before exception"
+                    </scripting:script>
+                </scripting:component>
+            </catch-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.AfterException)]">
+                <scripting:component>
+                    <scripting:script engine="groovy">
+                        return "an after exception"
+                    </scripting:script>
+                </scripting:component>
+            </catch-exception-strategy>
+            <catch-exception-strategy>
+                <scripting:component>
+                    <scripting:script engine="groovy">
+                        return "an general exception "
+                    </scripting:script>
+                </scripting:component>
+            </catch-exception-strategy>
+        </choice-exception-strategy>
+
     </flow>
 
 </mule>

@@ -19,6 +19,7 @@ public class UCTransformer extends AbstractTransformer {
 
     @Override
     protected Object doTransform(Object src, String enc) throws TransformerException {
+
         try {
             return dataTransformer.doTransform(src, enc);
         } catch (DataTransformerException e) {

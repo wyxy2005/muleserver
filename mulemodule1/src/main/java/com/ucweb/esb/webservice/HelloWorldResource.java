@@ -23,7 +23,4 @@ public class HelloWorldResource {
     public String sayHello(@PathParam("name") String name) {
         return "Hello " + name;
     }
-
-
-
 }

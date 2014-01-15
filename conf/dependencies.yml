@@ -15,6 +15,8 @@ require:
     - de.schlichtherle.truezip ->  truezip-file 7.7.5
     - de.schlichtherle.truezip ->  truezip-path 7.7.5
     - de.schlichtherle.truezip ->  truezip-kernel 7.7.5
+    - org.apache.httpcomponents -> httpclient 4.2.5
+    - com.ucweb.esb -> mule-extension 1.0-SNAPSHOT
 # Default repositories, used for all projects
 #repositories:
 #
