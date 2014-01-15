@@ -1,4 +1,4 @@
-package com.ucweb.esb.transformer;
+package com.ucweb.esb.exception;
 
 /**
  * 功能描述：

@@ -3,7 +3,7 @@ package com.ggd543.esb.transformer;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.ucweb.esb.transformer.DataTransformer;
-import com.ucweb.esb.transformer.DataTransformerException;
+import com.ucweb.esb.exception.DataTransformerException;
 
 /**
  * 功能描述：

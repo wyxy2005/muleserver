@@ -1,5 +1,6 @@
 package com.ucweb.esb.transformer;
 
+import com.ucweb.esb.exception.DataTransformerException;
 import org.mule.api.transformer.TransformerException;
 import org.mule.transformer.AbstractTransformer;
 
@@ -13,7 +14,7 @@ import org.mule.transformer.AbstractTransformer;
  * @since 1.0.0
  * create on: 2014年01月07
  */
-public class UCTransformer extends AbstractTransformer {
+public class ESBTransformer extends AbstractTransformer {
 
     private DataTransformer dataTransformer = new DataTransformer(){
         @Override

@@ -23,11 +23,11 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         <spring:import resource="spring-config.xml"/>
     </spring:beans>
 
-    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer"
+    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.transformer.ESBTransformer"
                         doc:name="UCBeforeJsonTransformer">
         <spring:property name="dataTransformer" ref="BeforeJsonTransformer"/>
     </custom-transformer>
-    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer"
+    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.transformer.ESBTransformer"
                         doc:name="UCAfterJsonTransformer">
         <spring:property name="dataTransformer" ref="AfterJsonTransformer"/>
     </custom-transformer>
@@ -84,19 +84,17 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
     <flow name="test-flow-2">
         <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy2">
         </http:inbound-endpoint>
-        <!--<echo-component></echo-component>-->
-        <!--<custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>-->
         <scripting:component>
             <scripting:script engine="groovy" file="service_monitor.groovy">
                 <property key="serviceMonitorUrl" value="http://localhost:9000/service/check"/>
             </scripting:script>
         </scripting:component>
+        <custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>
         <http:outbound-endpoint exchange-pattern="request-response"
-                                address="http://127.0.0.1:9000/action/invoke?#[message.inboundProperties['http.query.params']]">
+                                address="http://127.0.0.1:9000/action/invoke?#[message.inboundProperties['http.query.string']]">
             <byte-array-to-string-transformer/>
             <transformer ref="BeforeActionTransformer"/>
-            <copy-properties propertyName="http.method"/>
-            <!--<copy-properties propertyName="http.*"/>-->
+            <copy-properties propertyName="http.*"/>
             <response>
                 <byte-array-to-string-transformer/>
                 <transformer ref="AfterActionTransformer"/>

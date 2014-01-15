@@ -1,5 +1,6 @@
 package com.ucweb.esb.transformer;
 
+import com.ucweb.esb.exception.DataTransformerException;
 import org.mule.api.transformer.TransformerException;
 import org.mule.transformer.AbstractTransformer;
 

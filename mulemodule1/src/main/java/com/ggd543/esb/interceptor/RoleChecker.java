@@ -93,6 +93,7 @@ public class RoleChecker extends AbstractEnvelopeInterceptor {
 //            System.out.println("throw an exception on AfterAction");
 //            throw new GeneralException();
 //        }
+        System.out.println("role checker last : " + this + " - accumulator: " + time.getAccumulator() );
         return event;
 //        try {
 //            System.out.println("role checker last : " + this + " - accumulator: " + time.getAccumulator() + " statistics: " + time.getStatistics()
