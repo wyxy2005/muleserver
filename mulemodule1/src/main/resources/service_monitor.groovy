@@ -30,6 +30,6 @@ String msg = IOUtils.toString(entity.getContent());
 System.out.println(" #### "+msg+" ####");
 if (!StringUtils.equals("SUCCESS", msg)){
     System.out.println("not work");
-    throw new com.ggd543.esb.exception.BeforeException();
+    throw new com.ggd543.esb.exception.InvalidServiceExcepton();
 }
 return prevPayLoad

@@ -10,6 +10,6 @@ public class AfterExceptionComponent implements Callable {
     @Override
     public Object onCall(MuleEventContext eventContext) throws Exception {
         System.out.println("after exception "+eventContext.getMessageAsString());
-        return eventContext.getMessage();
+        return null;
     }
 }

@@ -119,18 +119,30 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         <http:outbound-endpoint exchange-pattern="request-response"
                                 address="http://127.0.0.1:9000/action/invoke?#[message.inboundProperties['http.query.string']]">
             <byte-array-to-string-transformer/>
-            <!--<transformer ref="BeforeActionTransformer"/>-->
+            <transformer ref="BeforeActionTransformer"/>
             <copy-properties propertyName="http.*"/>
             <response>
                 <byte-array-to-string-transformer/>
-                <!--<transformer ref="AfterActionTransformer"/>-->
+                <transformer ref="AfterActionTransformer"/>
             </response>
         </http:outbound-endpoint>
         <choice-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.InvalidServiceExcepton)]">
+                <scripting:component>
+                    <scripting:script engine="groovy">
+                        return "service unavailiable"
+                    </scripting:script>
+                </scripting:component>
+            </catch-exception-strategy>
             <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.BeforeException)]">
                 <component>
                     <singleton-object class="com.ggd543.esb.component.BeforeExceptionComponent"/>
                 </component>
+                <scripting:component>
+                <scripting:script engine="groovy">
+                    return "an before exception "
+                </scripting:script>
+                </scripting:component>
                 <!--<scripting:component>-->
                 <!--<scripting:script engine="groovy">-->
                 <!--return "an before exception"-->
@@ -138,12 +150,12 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
                 <!--</scripting:component>-->
             </catch-exception-strategy>
             <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.AfterException)]">
-                <!--<component>-->
-                    <!--<singleton-object class="com.ggd543.esb.component.AfterExceptionComponent"/>-->
-                <!--</component>-->
+                <component>
+                    <singleton-object class="com.ggd543.esb.component.AfterExceptionComponent"/>
+                </component>
+
                 <scripting:component>
                     <scripting:script engine="groovy">
-                        println(exception);
                         return "an after exception "
                     </scripting:script>
                 </scripting:component>
@@ -154,7 +166,6 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
                 <!--</component>-->
                 <scripting:component>
                     <scripting:script engine="groovy">
-                        println(exception);
                         return "an general exception "
                     </scripting:script>
                 </scripting:component>

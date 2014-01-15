@@ -1,5 +1,7 @@
 package com.ggd543.esb.interceptor;
 
+import com.ggd543.esb.exception.AfterException;
+import com.ggd543.esb.exception.BeforeException;
 import org.mule.DefaultMuleEvent;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
@@ -18,8 +20,14 @@ public class DataInterceptor extends AbstractEnvelopeInterceptor {
         MuleMessage message = event.getMessage();
         try {
             System.out.println("before interceptor: "+message.getPayloadAsString());
+            if ((int) (Math.random() * 2) == 0) {
+                System.out.println("throw before exception");
+                throw new BeforeException();
+            }
             message.setPayload("iiiiiiiiiiiiiiiiiiiii");
-        } catch (Exception e) {
+        }catch (MuleException e ){
+            throw e;
+        }catch (Exception e) {
             e.printStackTrace();
         }
         return new DefaultMuleEvent(message, event);
@@ -29,8 +37,14 @@ public class DataInterceptor extends AbstractEnvelopeInterceptor {
     public MuleEvent after(MuleEvent event) throws MuleException {
         MuleMessage message = event.getMessage();
         try {
+            if ((int) (Math.random() * 2) == 0) {
+                System.out.println("throw after exception");
+                throw new AfterException();
+            }
             System.out.println("after interceptor: "+message.getPayloadAsString());
             message.setPayload(new Date() + "_" + message.getPayloadAsString());
+        }catch (MuleException e ){
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -40,6 +54,7 @@ public class DataInterceptor extends AbstractEnvelopeInterceptor {
     @Override
     public MuleEvent last(MuleEvent event, ProcessingTime time, long startTime, boolean exceptionWasThrown) throws MuleException {
 //        MuleMessage message = event.getMessage();
+        System.out.println("last");
         return event;
     }
 }
