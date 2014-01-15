@@ -1,5 +1,7 @@
 package com.ucweb.esb.transformer;
 
+import com.ucweb.esb.exception.DataTransformerException;
+
 /**
  * 功能描述：
  * <p> 版权所有：优视科技
@@ -12,6 +14,6 @@ package com.ucweb.esb.transformer;
  */
 
 public interface DataTransformer {
-    public Object doTransform(Object src, String enc) throws DataTransformerException ;
+    public Object doTransform(Object src, String enc) throws DataTransformerException;
 }
 

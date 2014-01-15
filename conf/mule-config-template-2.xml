@@ -84,4 +84,51 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
     </flow>
 
 
+    <flow name="test-flow-2">
+        <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy2">
+        </http:inbound-endpoint>
+        <scripting:component>
+            <scripting:script engine="groovy" file="service_monitor.groovy">
+                <property key="serviceMonitorUrl" value="http://localhost:9000/service/check"/>
+            </scripting:script>
+        </scripting:component>
+        <custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>
+        <http:outbound-endpoint exchange-pattern="request-response"
+                                address="http://127.0.0.1:9000/action/invoke?#[message.inboundProperties['http.query.string']]">
+            <byte-array-to-string-transformer/>
+            <transformer ref="BeforeActionTransformer"/>
+            <copy-properties propertyName="http.*"/>
+            <response>
+                <byte-array-to-string-transformer/>
+                <transformer ref="AfterActionTransformer"/>
+            </response>
+        </http:outbound-endpoint>
+        <choice-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.BeforeException)]">
+                <scripting:component>
+                    <scripting:script engine="groovy">
+                        return "an before exception"
+                    </scripting:script>
+                </scripting:component>
+            </catch-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.AfterException)]">
+                <scripting:component>
+                    <scripting:script engine="groovy">
+                        return "an after exception"
+                    </scripting:script>
+                </scripting:component>
+            </catch-exception-strategy>
+            <catch-exception-strategy>
+                <scripting:component>
+                    <scripting:script engine="groovy">
+                        return "an general exception "
+                    </scripting:script>
+                </scripting:component>
+            </catch-exception-strategy>
+        </choice-exception-strategy>
+
+    </flow>
+
+
+
 </mule>

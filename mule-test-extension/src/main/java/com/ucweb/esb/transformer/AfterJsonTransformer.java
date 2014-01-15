@@ -2,6 +2,7 @@ package com.ucweb.esb.transformer;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.ucweb.esb.exception.DataTransformerException;
 
 /**
  * 功能描述：
