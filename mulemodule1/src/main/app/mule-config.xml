@@ -23,11 +23,11 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         <spring:import resource="spring-config.xml"/>
     </spring:beans>
 
-    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.transformer.ESBTransformer"
+    <custom-transformer name="UCBeforeJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer"
                         doc:name="UCBeforeJsonTransformer">
         <spring:property name="dataTransformer" ref="BeforeJsonTransformer"/>
     </custom-transformer>
-    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.transformer.ESBTransformer"
+    <custom-transformer name="UCAfterJsonTransformer" class="com.ucweb.esb.transformer.UCTransformer"
                         doc:name="UCAfterJsonTransformer">
         <spring:property name="dataTransformer" ref="AfterJsonTransformer"/>
     </custom-transformer>
@@ -37,8 +37,8 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 
     <pattern:http-proxy name="logjson-proxy" transformer-refs="byte-to-string UCBeforeJsonTransformer"
                         responseTransformer-refs="byte-to-string UCAfterJsonTransformer"
-                        inboundAddress="http://10.1.45.208:7070/logjson"
-                        outboundAddress="http://10.1.45.208:9000/logjson">
+                        inboundAddress="http://127.0.0.1:7070/logjson"
+                        outboundAddress="http://127.0.0.1:9000/logjson">
     </pattern:http-proxy>
 
     <flow name="HelloWorld">
@@ -57,29 +57,6 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         <!--<custom-interceptor class="com.ggd543.esb.interceptor.PermissionChecker"/>-->
         <custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>
     </interceptor-stack>
-
-    <flow name="test-flow-1">
-        <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy1">
-        </http:inbound-endpoint>
-        <echo-component></echo-component>
-        <!--<component class="com.ggd543.esb.component.ServiceMonitor"/>-->
-        <!--<custom-interceptor class="com.ggd543.esb.interceptor.PermissionChecker"/>-->
-        <component>
-            <interceptor-stack ref="Checker"/>
-            <prototype-object class="com.ggd543.esb.component.ServiceMonitor"/>
-        </component>
-        <copy-properties propertyName="*"/>
-        <custom-interceptor class="com.ggd543.esb.interceptor.RoleChecker"/>
-        <http:outbound-endpoint exchange-pattern="request-response"
-                                address="http://127.0.0.1:9000/action/invoke?name=#[message.inboundProperties['http.method']]">
-            <transformer ref="BeforeActionTransformer"/>
-            <response>
-                <byte-array-to-string-transformer/>
-                <transformer ref="AfterActionTransformer"/>
-            </response>
-        </http:outbound-endpoint>
-
-    </flow>
 
     <flow name="test-flow-2">
         <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy2">
@@ -102,20 +79,91 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         </http:outbound-endpoint>
         <choice-exception-strategy>
             <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.BeforeException)]">
+                <component>
+                    <singleton-object class="com.ggd543.esb.component.BeforeExceptionComponent"/>
+                </component>
+                <!--<scripting:component>-->
+                <!--<scripting:script engine="groovy">-->
+                <!--return "an before exception"-->
+                <!--</scripting:script>-->
+                <!--</scripting:component>-->
+            </catch-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.AfterException)]">
+                <component>
+                    <singleton-object class="com.ggd543.esb.component.AfterExceptionComponent"/>
+                </component>
+            </catch-exception-strategy>
+            <catch-exception-strategy>
+                <component>
+                    <singleton-object class="com.ggd543.esb.component.GeneralExceptionComponent"/>
+                </component>
+                <!--<scripting:component>-->
+                <!--<scripting:script engine="groovy">-->
+                <!--return "an general exception "-->
+                <!--</scripting:script>-->
+                <!--</scripting:component>-->
+            </catch-exception-strategy>
+        </choice-exception-strategy>
+
+    </flow>
+
+    <flow name="test-flow-3">
+        <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy3">
+        </http:inbound-endpoint>
+        <scripting:component>
+            <scripting:script engine="groovy" file="service_monitor.groovy">
+                <property key="serviceMonitorUrl" value="http://localhost:9000/service/check"/>
+            </scripting:script>
+        </scripting:component>
+        <custom-interceptor class="com.ggd543.esb.interceptor.DataInterceptor"/>
+        <http:outbound-endpoint exchange-pattern="request-response"
+                                address="http://127.0.0.1:9000/action/invoke?#[message.inboundProperties['http.query.string']]">
+            <byte-array-to-string-transformer/>
+            <transformer ref="BeforeActionTransformer"/>
+            <copy-properties propertyName="http.*"/>
+            <response>
+                <byte-array-to-string-transformer/>
+                <transformer ref="AfterActionTransformer"/>
+            </response>
+        </http:outbound-endpoint>
+        <choice-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.InvalidServiceExcepton)]">
                 <scripting:component>
                     <scripting:script engine="groovy">
-                        return "an before exception"
+                        return "service unavailiable"
                     </scripting:script>
                 </scripting:component>
             </catch-exception-strategy>
+            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.BeforeException)]">
+                <component>
+                    <singleton-object class="com.ggd543.esb.component.BeforeExceptionComponent"/>
+                </component>
+                <scripting:component>
+                <scripting:script engine="groovy">
+                    return "an before exception "
+                </scripting:script>
+                </scripting:component>
+                <!--<scripting:component>-->
+                <!--<scripting:script engine="groovy">-->
+                <!--return "an before exception"-->
+                <!--</scripting:script>-->
+                <!--</scripting:component>-->
+            </catch-exception-strategy>
             <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.AfterException)]">
+                <component>
+                    <singleton-object class="com.ggd543.esb.component.AfterExceptionComponent"/>
+                </component>
+
                 <scripting:component>
                     <scripting:script engine="groovy">
-                        return "an after exception"
+                        return "an after exception "
                     </scripting:script>
                 </scripting:component>
             </catch-exception-strategy>
             <catch-exception-strategy>
+                <!--<component>-->
+                <!--<singleton-object class="com.ggd543.esb.component.GeneralExceptionComponent"/>-->
+                <!--</component>-->
                 <scripting:component>
                     <scripting:script engine="groovy">
                         return "an general exception "
@@ -125,5 +173,4 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
         </choice-exception-strategy>
 
     </flow>
-
 </mule>
