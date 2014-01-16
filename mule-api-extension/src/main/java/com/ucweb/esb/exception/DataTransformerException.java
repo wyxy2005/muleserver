@@ -10,6 +10,7 @@ package com.ucweb.esb.exception;
  * @since 1.0.0
  * create on: 2014年01月07
  */
+@Deprecated
 public class DataTransformerException  extends Exception{
     public DataTransformerException() {
     }

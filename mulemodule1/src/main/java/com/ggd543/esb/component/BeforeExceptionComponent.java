@@ -12,6 +12,8 @@ public class BeforeExceptionComponent implements Callable {
         System.out.println("before exception " + eventContext.getMessageAsString() + " exception: " + eventContext.getMessage().getExceptionPayload().getException());
         System.out.println("root exception "+eventContext.getMessage().getExceptionPayload().getRootException());
         eventContext.getMessage().getExceptionPayload().getRootException().printStackTrace();
-        return null;
+//        return null;
+
+        return eventContext.getMessage().getExceptionPayload();
     }
 }

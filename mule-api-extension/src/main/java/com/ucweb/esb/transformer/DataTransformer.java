@@ -12,7 +12,7 @@ import com.ucweb.esb.exception.DataTransformerException;
  * @since 1.0.0
  * create on: 2014年01月07
  */
-
+@Deprecated
 public interface DataTransformer {
     public Object doTransform(Object src, String enc) throws DataTransformerException;
 }
