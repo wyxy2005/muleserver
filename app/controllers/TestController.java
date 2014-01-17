@@ -38,6 +38,7 @@ public class TestController extends Controller {
         renderJSON(user);
     }
 
+
     public static void getJson() {
         User user = getUser();
         renderJSON(user);
@@ -49,7 +50,6 @@ public class TestController extends Controller {
         for(Map.Entry<String,Http.Header> entry : request.headers.entrySet()){
             Logger.debug("%s = %s", entry.getKey(), entry.getValue());
         }
-
         renderText(request.method);
     }
 

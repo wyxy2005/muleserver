@@ -83,7 +83,6 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
                 address="http://127.0.0.1:9000/action/invoke?name=#[message.inboundProperties['http.method']]"/>
     </flow>
 
-
     <flow name="test-flow-2">
         <http:inbound-endpoint exchange-pattern="request-response" address="http://127.0.0.1:8066/service/proxy2">
         </http:inbound-endpoint>

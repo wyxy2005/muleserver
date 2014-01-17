@@ -16,7 +16,13 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import com.ucweb.esb.exception.InvalidServiceException;
 
+//println(payload)
+//println(payload.getPath())
+//println(payload.getPort())
+//println(payload.getHost())
+prevPayLoad = payload
 HttpGet getReq = new HttpGet(serviceMonitorUrl);
 HttpClient httpClient = new DefaultHttpClient();
 HttpResponse httpResponse = httpClient.execute(getReq);
@@ -25,5 +31,6 @@ String msg = IOUtils.toString(entity.getContent());
 System.out.println(" #### "+msg+" ####");
 if (!StringUtils.equals("SUCCESS", msg)){
     System.out.println("not work");
-    throw new com.ucweb.esb.exception.InvalidServiceException();
+    throw new  InvalidServiceException();
 }
+return prevPayLoad

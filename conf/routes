@@ -4,7 +4,7 @@
 
 # Home page
 GET     /                                       Application.index
-GET     /services       Application.serviceForm
+GET     /services       Application.listService
 GET     /registry-service   Application.registryForm
 POST    /registry-service   Application.registryForm
 

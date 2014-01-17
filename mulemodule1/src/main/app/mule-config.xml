@@ -115,16 +115,17 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
                 <property key="serviceMonitorUrl" value="http://localhost:9000/service/check"/>
             </scripting:script>
         </scripting:component>
-        <custom-interceptor class="com.ggd543.esb.interceptor.DataInterceptor"/>
+        <custom-interceptor class="com.ggd543.esb.interceptor.DataInterceptor">
+        </custom-interceptor>
         <http:outbound-endpoint exchange-pattern="request-response"
                                 address="http://127.0.0.1:9000/action/invoke?#[message.inboundProperties['http.query.string']]">
-            <byte-array-to-string-transformer/>
-            <transformer ref="BeforeActionTransformer"/>
+            <!--<byte-array-to-string-transformer/>-->
+            <!--<transformer ref="BeforeActionTransformer"/>-->
             <copy-properties propertyName="http.*"/>
-            <response>
-                <byte-array-to-string-transformer/>
-                <transformer ref="AfterActionTransformer"/>
-            </response>
+            <!--<response>-->
+                <!--<byte-array-to-string-transformer/>-->
+                <!--<transformer ref="AfterActionTransformer"/>-->
+            <!--</response>-->
         </http:outbound-endpoint>
         <choice-exception-strategy>
             <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.InvalidServiceExcepton)]">
@@ -134,41 +135,40 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
                     </scripting:script>
                 </scripting:component>
             </catch-exception-strategy>
-            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.BeforeException)]">
-                <component>
-                    <singleton-object class="com.ggd543.esb.component.BeforeExceptionComponent"/>
-                </component>
-                <scripting:component>
-                <scripting:script engine="groovy">
-                    return "an before exception "
-                </scripting:script>
-                </scripting:component>
-                <!--<scripting:component>-->
-                <!--<scripting:script engine="groovy">-->
-                <!--return "an before exception"-->
-                <!--</scripting:script>-->
-                <!--</scripting:component>-->
-            </catch-exception-strategy>
-            <catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.AfterException)]">
-                <component>
-                    <singleton-object class="com.ggd543.esb.component.AfterExceptionComponent"/>
-                </component>
-
-                <scripting:component>
-                    <scripting:script engine="groovy">
-                        return "an after exception "
-                    </scripting:script>
-                </scripting:component>
-            </catch-exception-strategy>
-            <catch-exception-strategy>
+            <!--<catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.BeforeException)]">-->
                 <!--<component>-->
-                <!--<singleton-object class="com.ggd543.esb.component.GeneralExceptionComponent"/>-->
+                    <!--<singleton-object class="com.ggd543.esb.component.BeforeExceptionComponent"/>-->
                 <!--</component>-->
-                <scripting:component>
-                    <scripting:script engine="groovy">
-                        return "an general exception "
-                    </scripting:script>
-                </scripting:component>
+                <!--<object-to-string-transformer/>-->
+                <!--&lt;!&ndash;<scripting:component>&ndash;&gt;-->
+                <!--&lt;!&ndash;<scripting:script engine="groovy">&ndash;&gt;-->
+                    <!--&lt;!&ndash;return "an before exception "&ndash;&gt;-->
+                <!--&lt;!&ndash;</scripting:script>&ndash;&gt;-->
+                <!--&lt;!&ndash;</scripting:component>&ndash;&gt;-->
+            <!--</catch-exception-strategy>-->
+            <!--<catch-exception-strategy when="#[exception.causedBy(com.ggd543.esb.exception.AfterException)]">-->
+                <!--<component>-->
+                    <!--<singleton-object class="com.ggd543.esb.component.AfterExceptionComponent"/>-->
+                <!--</component>-->
+                <!--<object-to-string-transformer/>-->
+                <!--&lt;!&ndash;<scripting:component>&ndash;&gt;-->
+                    <!--&lt;!&ndash;<scripting:script engine="groovy">&ndash;&gt;-->
+                        <!--&lt;!&ndash;return "an after exception "&ndash;&gt;-->
+                    <!--&lt;!&ndash;</scripting:script>&ndash;&gt;-->
+                <!--&lt;!&ndash;</scripting:component>&ndash;&gt;-->
+            <!--</catch-exception-strategy>-->
+            <catch-exception-strategy>
+
+                <component>
+                <!--<spring-object bean=""-->
+                <singleton-object class="com.ggd543.esb.component.GeneralExceptionComponent"/>
+                </component>
+                <!--<scripting:component>-->
+                    <!--<scripting:script engine="groovy">-->
+                        <!--return exception.getCause();-->
+                    <!--</scripting:script>-->
+                <!--</scripting:component>-->
+                <object-to-string-transformer/>
             </catch-exception-strategy>
         </choice-exception-strategy>
 

@@ -26,6 +26,8 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 
 
     <spring:beans>
+        <spring:bean name="defaultGlobalExceptionHandler" class="com.ucweb.esb.component.ExceptionHandler">
+        </spring:bean>
         <!--<spring:import resource="spring-mule-config.xml"/>-->
     </spring:beans>
 

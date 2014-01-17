@@ -9,7 +9,7 @@ import org.mule.api.lifecycle.Callable;
 public class AfterExceptionComponent implements Callable {
     @Override
     public Object onCall(MuleEventContext eventContext) throws Exception {
-        System.out.println("after exception "+eventContext.getMessageAsString());
-        return null;
+        System.out.println("after exception " + eventContext.getMessageAsString());
+        return new RuntimeException();
     }
 }

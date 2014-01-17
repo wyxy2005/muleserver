@@ -1,10 +1,6 @@
-package com.ggd543.esb.exception;
-
-import java.util.List;
+package com.ucweb.esb.exception;
 
 import org.mule.api.MuleException;
-import org.mule.api.transformer.Transformer;
-import org.mule.api.transformer.TransformerException;
 import org.mule.config.i18n.Message;
 
 /**
@@ -15,22 +11,21 @@ import org.mule.config.i18n.Message;
  * @author <a href="mailto:liuyj3@ucweb.com">刘永健</a>
  * @version 1.0.0
  * @since 1.0.0
- * create on: 2014年01月15
+ * create on: 2014年01月16
  */
-public class BeforeException extends MuleException {
-
-    public BeforeException(Message message) {
+public class InterceptorException extends MuleException {
+    public InterceptorException(Message message) {
         super(message);
     }
 
-    public BeforeException(Message message, Throwable cause) {
+    public InterceptorException(Message message, Throwable cause) {
         super(message, cause);
     }
 
-    public BeforeException(Throwable cause) {
+    public InterceptorException(Throwable cause) {
         super(cause);
     }
 
-    public BeforeException() {
+    public InterceptorException() {
     }
 }

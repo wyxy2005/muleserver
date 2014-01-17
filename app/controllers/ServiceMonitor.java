@@ -16,13 +16,24 @@ import play.mvc.Controller;
  * create on: 2014年01月15
  */
 public class ServiceMonitor extends Controller {
-    private static final Map<String ,String > URLS = new ConcurrentHashMap<String ,String >();
+    private static final String SUCCESS = "SUCCESS";
+    private static final String FAIL = "FAIL";
 
-    public static void addMonitorService(){
+    private static final Map<String, String> URLS = new ConcurrentHashMap<String, String>();
+
+    public static void addMonitorService() {
 
     }
 
-    public static void checkService(String name){
-
+    public static void checkService(String name) {
+        if ((int) (Math.random() * 2) == 0) {
+            renderText(SUCCESS);
+        } else {
+            renderText(FAIL);
+        }
     }
+
+
+
+
 }

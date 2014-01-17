@@ -1,0 +1,20 @@
+#{extends 'main.html' /}
+#{set title:'Service Form' /}
+
+<div>
+    <a href="@{Register.deployService()}">
+        <button>注册应用服务</button>
+    </a>
+    &nbsp;
+    <a href="#">
+        <button>审核服务注册</button>
+    </a>
+
+    &nbsp;
+    <a href="@{Register.listService()}">
+        <button>查看服务状态</button>
+    </a>
+
+</div>
+
+#{doLayout /}

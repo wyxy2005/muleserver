@@ -4,7 +4,6 @@ import com.google.gson.JsonObject;
 import org.apache.commons.lang.StringUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
-import org.dom4j.DocumentHelper;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 import org.mule.MessageExchangePattern;
@@ -26,12 +25,10 @@ import play.mvc.*;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
-import java.util.logging.*;
 
 import models.*;
 import plugins.MulePlugin;
@@ -71,9 +68,9 @@ public class Application extends Controller {
         render();
     }
 
-    public static void serviceForm() {
-        List<ServiceRegistry> serviceRegistryList = ServiceRegistry.all().fetch();
-        render(serviceRegistryList);
+    public static void listService() {
+        List<Service> serviceList = Service.all().fetch();
+        render(serviceList);
     }
 
     public static void registryForm(String name, String url) throws MalformedURLException, MuleException {
@@ -82,7 +79,7 @@ public class Application extends Controller {
         }
 //        addService(name, url);
         addProxy(name,url);
-        serviceForm();
+        listService();
     }
 
     private static void addService(String name, String url) throws MalformedURLException, MuleException {
@@ -109,11 +106,9 @@ public class Application extends Controller {
         flow.setMessageProcessors(Arrays.asList((MessageProcessor) outboundEndpoint));
         registry.registerFlowConstruct(flow);
 
-        ServiceRegistry sr = new ServiceRegistry();
-        sr.name = name;
-        sr.fromUrl = MULE_SERVICE_URL + "/" + name;
-        sr.toUrl = url;
-        sr.save();
+        Service service = new Service();
+        service.name = name;
+        service.save();
     }
 
 
@@ -128,10 +123,8 @@ public class Application extends Controller {
         builder.outboundAddress(toUrl);
         HttpProxy proxy = builder.build(MulePlugin.muleContext);
         MulePlugin.muleRegistry.registerFlowConstruct(proxy);
-        ServiceRegistry sr = new ServiceRegistry();
+        Service sr = new Service();
         sr.name = name;
-        sr.fromUrl = fromUrl;
-        sr.toUrl = toUrl;
         sr.save();
     }
 

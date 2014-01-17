@@ -1,23 +1,37 @@
-#{extends 'main.html' /}
-#{set title:'Service Form' /}
+#{extends 'Register/top.html'/}
+
+<h1>服务列表</h1>
+
+#{list services.keySet(),  as:  'appKey'}
+<hr/>
 
 <table border="1">
-    <caption>服务列表</caption>
+    <caption><h3>${appKey}</h3></caption>
     <thead>
     <tr>
         <th>服务名</th>
+        <th>服务类型</th>
+        <th>本地服务地址</th>
+        <th>远程服务地址</th>
+        <th>状态</th>
     </tr>
     </thead>
     <tbody>
-    #{list serviceList, as : 'sr' }
-    <tr>
-        <td>${sr.name}</td>
-    </tr>
-    #{/list}
+        #{list items: services.get(appKey), as : 'service' }
+        <tr>
+            <td>${service.name}</td>
+            <td>${service.type}</td>
+            <td>${service.address}</td>
+            <td>${service.targetUrl}</td>
+            #{if ((int)(java.lang.Math.random() * 2)) == 0}
+                <td style="color: green">可用</td>
+            #{/if}
+            #{else}
+                <td style="color: red">不可用</td>
+            #{/else}
+        </tr>
+        #{/list}
     </tbody>
 </table>
 
-<div>
-    <a href="@{Register.deployService()}"><button >注册服务</button></a>
-
-</div>
+#{/list}

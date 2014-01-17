@@ -1,15 +1,12 @@
 package controllers;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import models.ServiceRegistry;
+import models.Service;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -33,20 +30,41 @@ public class Register extends Controller {
 
     private static Document JMSConnectorClientId;
 
+    public static void clearDB() {
+        Service.deleteAll();
+    }
+
     public static void OutputOK() {
         ok();
     }
 
     public static void listService() {
-        List<ServiceRegistry> serviceList = ServiceRegistry.all().fetch();
-        render(serviceList);
+
+        List<Service> serviceList = Service.all().fetch();
+        System.out.println(serviceList.size());
+        Map<String, List<Service>> services = new HashMap<String, List<Service>>();
+        for (Service service : serviceList) {
+            if (!services.containsKey(service.appKey)) {
+                services.put(service.appKey, new LinkedList<Service>());
+            }
+            services.get(service.appKey).add(service);
+        }
+        render(services);
     }
 
+    /**
+     * 上传并注册服务
+     *
+     * @param zipFile
+     * @param name
+     * @throws Exception
+     */
     public static void deployService(File zipFile, String name) throws Exception {
         if (StringUtils.equals("GET", request.method)) {
             render(name);
         }
-        Logger.info("zipFile " + zipFile + " name : " + name);
+        Logger.info("zipFile " + zipFile + " name : " + name + " " + request.params.get("name"));
+        Service.delete("appKey = ?", name);
         deployMuleService(zipFile, name);
         listService();
     }
@@ -75,7 +93,6 @@ public class Register extends Controller {
         });
         return document;
     }
-
 
     private static void deployMuleService(File zipFile, String name) throws IOException, DocumentException {
         boolean hasSpringMuleConfig = false;
@@ -106,20 +123,24 @@ public class Register extends Controller {
         try (ZipOutputStream zos = copy(zipFile, destFile)) {
             addMuleConfigDescriptorToZipFile(zos, muleConfigDescriptor);
 
+            ZipEntry zipEntry = new ZipEntry("classes/");
+            zos.putNextEntry(zipEntry);
+            zos.closeEntry();
+
             addMQGroovyFileToZipFile(zos, Play.getFile("conf/mq.groovy"));
+            addMQGroovyFileToZipFile(zos, Play.getFile("conf/service_monitor.groovy"));
+            addMQGroovyFileToZipFile(zos, Play.getFile("conf/invalid_service_exception_handler.groovy"));
         }
         String baseFileName = destFile.getName().substring(0, destFile.getName().lastIndexOf(".zip"));
         FileUtils.deleteQuietly(new File(MULE_HOME, baseFileName + "-anchor.txt"));
         FileUtils.copyFile(destFile, new File(MULE_HOME, baseFileName + ".zip"));
+
+
     }
 
     private static void addMQGroovyFileToZipFile(ZipOutputStream zos, File file) throws IOException {
-        ZipEntry zipEntry = new ZipEntry("classes/");
-        zipEntry.setTime(System.currentTimeMillis());
-        zos.closeEntry();
         try (FileInputStream fis = new FileInputStream(file)) {
-            zos.putNextEntry(zipEntry);
-            zipEntry = new ZipEntry("classes/" + file.getName());
+            ZipEntry zipEntry = new ZipEntry("classes/" + file.getName());
             zos.putNextEntry(zipEntry);
             IOUtils.copy(fis, zos);
         } finally {
@@ -159,11 +180,25 @@ public class Register extends Controller {
         }
     }
 
+    private static void addOrUpdateService(String name, Service.Type type, String method, String address, String targetUrl) {
+        String appKey = request.params.get("name");
+        Service service = new Service();
+        service.appKey = appKey;
+        service.address = address;
+        service.type = type;
+        service.name = name;
+        service.method = method;
+        service.targetUrl = targetUrl;
+        service.status = Service.Status.WAITING_APPROVED;
+        service.save();
+    }
+
 
     private static void modifyMuleConfigDescriptor(Document muleConfigDescriptor, Document serviceDescriptor, boolean hasSpringMuleConfig) {
         List<Node> nodeList = serviceDescriptor.selectNodes("//service");
+
         Logger.debug("%s service node", nodeList.size());
-        Map<String, String> transformerClassNames = new HashMap<String, String>();
+        Map<String, String> name2ClassName = new HashMap<String, String>();
         int id = 0;
         for (Node node : nodeList) {
             String type = node.valueOf("@type");
@@ -171,17 +206,17 @@ public class Register extends Controller {
                 parseMQFlow(node, muleConfigDescriptor, id);
                 id += 1;
             } else {
-                parseServiceFlow(node, muleConfigDescriptor, transformerClassNames);
+                parseServiceFlow(node, muleConfigDescriptor, name2ClassName);
             }
         }
 
         if (!hasSpringMuleConfig) {
-            addSpringBean(muleConfigDescriptor, transformerClassNames);
+            addSpringBean(muleConfigDescriptor, name2ClassName);
         } else {
             addSpringImport(muleConfigDescriptor);
         }
 
-       generateJMSConnectorClientId(muleConfigDescriptor);
+        generateJMSConnectorClientId(muleConfigDescriptor);
 
         Logger.info("generate mule-config.xml");
 
@@ -215,49 +250,60 @@ public class Register extends Controller {
             Element scriptingComponentElement = DocumentHelper.createElement(new QName("component", scriptingNS));
             Element scriptElement = DocumentHelper.createElement(new QName("script", scriptingNS)).addAttribute("engine", "groovy")
                     .addAttribute("file", "mq.groovy");
-            Element hostNamePropElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "hostName").addAttribute("value", "queue:Consumer." +id+ ".VirtualTopic." + topicName);
+            Element hostNamePropElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "hostName").addAttribute("value", "queue:Consumer." + id + ".VirtualTopic." + topicName);
             scriptElement.add(hostNamePropElement);
             Element connectorRefElement = DocumentHelper.createElement(new QName("property", ns)).addAttribute("key", "connectorRef").addAttribute("value", "jmsConnector");
             scriptElement.add(connectorRefElement);
             scriptingComponentElement.add(scriptElement);
             flowElement.add(scriptingComponentElement);
         }
+
+        addOrUpdateService(name, Service.Type.MQ, method, address, null);
     }
 
-    private static void parseServiceFlow(Node node, Document muleConfigDescriptor, Map<String, String> transformerClassNames) {
+    private static void parseServiceFlow(Node node, Document muleConfigDescriptor, Map<String, String> name2ClassName) {
         String name = node.valueOf("@name");
-        String path =  node.valueOf("@path");
-        String targetUrl = node.valueOf("@service-url");
+        String path = node.valueOf("@path");
+        String targetUrl = node.valueOf("@address");
 
-        Node beforeTransformerNode = node.selectSingleNode("./before-transformer");
-        String beforeTransformerName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@name");
-        String beforeTransformerClassName = beforeTransformerNode == null ? null : beforeTransformerNode.valueOf("@class");
-        Node afterTransformerNode = node.selectSingleNode("./after-transformer");
-        String afterTransformerName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@name");
-        String afterTransformerClassName = afterTransformerNode == null ? null : afterTransformerNode.valueOf("@class");
-        Logger.debug("name %s , path: %s beforeTransformerName : %s  beforeTransformerzClassName: %s"
-                , name, path, beforeTransformerName, beforeTransformerClassName);
+        // 外部服务的监控地址
+        Node serviceMonitorNode = node.selectSingleNode("./service-monitor");
+        String serviceMonitorAddress = serviceMonitorNode == null ? null : serviceMonitorNode.valueOf("@address");
 
-        if (StringUtils.isNotEmpty(beforeTransformerName)) {
-            addCustomTransformer(beforeTransformerName, muleConfigDescriptor);
-            if (StringUtils.isNotEmpty(beforeTransformerClassName)) {
-                transformerClassNames.put(beforeTransformerName, beforeTransformerClassName);
-            }
+        // 数据处理器
+        Node dataProcessorNode = node.selectSingleNode("./data-processor");
+        String dataProcessorName = dataProcessorNode == null ? null : dataProcessorNode.valueOf("@name");
+        String dataProcessorClassName = dataProcessorNode == null ? null : dataProcessorNode.valueOf("@class");
+        Logger.debug("name %s , path: %s dataProcessorName : %s  dataProcessorClassName: %s"
+                , name, path, dataProcessorName, dataProcessorClassName);
+
+        if (StringUtils.isEmpty(dataProcessorName) && StringUtils.isNotEmpty(dataProcessorClassName)) {
+            dataProcessorName = UUID.randomUUID().toString();
+        }
+        if (StringUtils.isNotEmpty(dataProcessorName) && StringUtils.isNotEmpty(dataProcessorClassName)) {
+            name2ClassName.put(dataProcessorName, dataProcessorClassName);
         }
 
-        if (StringUtils.isNotEmpty(afterTransformerName)) {
-            addCustomTransformer(afterTransformerName, muleConfigDescriptor);
-            if (StringUtils.isNotEmpty(afterTransformerClassName)) {
-                transformerClassNames.put(afterTransformerName, afterTransformerClassName);
-            }
+
+        // 异常处理器
+        Node exceptionProcessorNode = node.selectSingleNode("./exception-processor");
+        String exceptionProcessorName = exceptionProcessorNode == null ? null : exceptionProcessorNode.valueOf("@name");
+        String exceptionProcessorClassName = exceptionProcessorNode == null ? null : exceptionProcessorNode.valueOf("@class");
+        if (StringUtils.isEmpty(exceptionProcessorName) && StringUtils.isNotEmpty(exceptionProcessorClassName)) {
+            exceptionProcessorName = UUID.randomUUID().toString();
         }
-        addPatternProxy(name, path,targetUrl,  beforeTransformerName, afterTransformerName, muleConfigDescriptor);
+        if (StringUtils.isNotEmpty(exceptionProcessorName) && StringUtils.isNotEmpty(exceptionProcessorClassName)) {
+            name2ClassName.put(exceptionProcessorName, exceptionProcessorClassName);
+        }
+
+        createServiceFlow(name, path, targetUrl, serviceMonitorAddress, dataProcessorName, exceptionProcessorName, muleConfigDescriptor);
+
     }
 
-    private static void addSpringBean(Document muleConfigDescriptor, Map<String, String> transformerClassNames) {
+    private static void addSpringBean(Document muleConfigDescriptor, Map<String, String> name2ClassName) {
         Namespace springNamespace = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("spring");
         Element beansElement = ((Element) muleConfigDescriptor.selectSingleNode("//spring:beans"));
-        for (Map.Entry<String, String> entry : transformerClassNames.entrySet()) {
+        for (Map.Entry<String, String> entry : name2ClassName.entrySet()) {
             String name = entry.getKey();
             String className = entry.getValue();
             Element e = DocumentHelper.createElement(new QName("bean", springNamespace)).addAttribute("name", name).addAttribute("class", className);
@@ -271,35 +317,79 @@ public class Register extends Controller {
         ((Element) muleConfigDescriptor.selectSingleNode("//spring:beans")).add(e);
     }
 
-    private static void addPatternProxy(String name, String path, String targetUrl, String beforeTransformerName, String afterTransformerName, Document muleConfigDescriptor) {
-        String transformerRefNames = "byte-to-string " + (beforeTransformerName == null ? "" : "UC" + beforeTransformerName);
-        String responseTransformerRefNames = "byte-to-string " + (afterTransformerName == null ? "" : "UC" + afterTransformerName);
-        String inboundAddress = MULE_SERVICE_URL + "/" + path;
-        Namespace patternNamespace = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("pattern");
-        Element patternElement = DocumentHelper.createElement(new QName("http-proxy", patternNamespace))
-                .addAttribute("name", name)
-                .addAttribute("transformer-refs", transformerRefNames)
-                .addAttribute("responseTransformer-refs", responseTransformerRefNames).addAttribute("inboundAddress", inboundAddress)
-                .addAttribute("outboundAddress",targetUrl);
-        muleConfigDescriptor.getRootElement().add(patternElement);
-    }
+    //    name, path, targetUrl, serviceMonitorAddress, dataProcessorName, exceptionProcessorName, muleConfigDescriptor
+    private static void createServiceFlow(String name, String path, String targetUrl, String serviceMonitorAddress,
+                                          String dataProcessorName, String exceptionProcessorName, Document muleConfigDescriptor) {
+        Element muleRootElement = muleConfigDescriptor.getRootElement();
+        Namespace namespace = muleRootElement.getNamespace();
+        Namespace httpNS = muleRootElement.getNamespaceForPrefix("http");
+        Namespace scriptingNS = muleRootElement.getNamespaceForPrefix("scripting");
+        Namespace springNS = muleRootElement.getNamespaceForPrefix("spring");
+        Element flow = muleRootElement.addElement(QName.get("flow", namespace)).addAttribute("name", name);
+        // 添加 inbound-endpoint 节点
+        String inboundAddress = MULE_SERVICE_URL + path;
+        flow.addElement(QName.get("inbound-endpoint", httpNS))
+                .addAttribute("exchange-pattern", "request-response")
+                .addAttribute("address", inboundAddress);
+        // 添加 服务监控 节点
+        if (StringUtils.isNotEmpty(serviceMonitorAddress)) {
+            flow.addElement(QName.get("component", scriptingNS))
+                    .addElement(QName.get("script", scriptingNS)).addAttribute("engine", "groovy").addAttribute("file", "service_monitor.groovy")
+                    .addElement(QName.get("property", namespace)).addAttribute("key", "serviceMonitorUrl").addAttribute("value", serviceMonitorAddress);
+        }
+        // 添加 数据拦截器
+        flow.addElement(QName.get("byte-array-to-string-transformer", namespace));
+        Element customInterceptor = flow.addElement(QName.get("custom-interceptor", namespace)).addAttribute("class", "com.ucweb.esb.interceptor.ESBInterceptor");
+        if (StringUtils.isNotEmpty(dataProcessorName)) {
+            customInterceptor.addElement(QName.get("property", springNS)).addAttribute("name", "processor").addAttribute("ref", dataProcessorName);
+        }
+//        <copy-properties propertyName="http.*"/>
+        // 添加 outbound-endpoint 节点
+        String outboundAddress = targetUrl + "?#[message.inboundProperties['http.query.string']]";
+        Element outboundEndpoint = flow.addElement(QName.get("outbound-endpoint", httpNS))
+                .addAttribute("exchange-pattern", "request-response")
+                .addAttribute("address", outboundAddress);
+        outboundEndpoint.addElement(QName.get("copy-properties", namespace)).addAttribute("propertyName", "http.*");
+        outboundEndpoint.addElement(QName.get("response", namespace)).addElement(QName.get("byte-array-to-string-transformer", namespace));
+        // 添加 异常处理策略 节点
+        Element choiceExceptionStrategy = flow.addElement(QName.get("choice-exception-strategy", namespace));
+        if (StringUtils.isNotEmpty(serviceMonitorAddress)) {
+            choiceExceptionStrategy.addElement(QName.get("catch-exception-strategy", namespace))
+                    .addAttribute("when", "#[exception.causedBy(com.ucweb.esb.exception.InvalidServiceException)]")
+                    .addElement(QName.get("component", scriptingNS))
+                    .addElement(QName.get("script", scriptingNS))
+                    .addAttribute("engine", "groovy").addAttribute("file", "invalid_service_exception_handler.groovy");
+        }
+        if (StringUtils.isNotEmpty(exceptionProcessorName)) {
+            Element cacheExceptionStrategy = choiceExceptionStrategy.addElement(QName.get("catch-exception-strategy", namespace))
+                    .addAttribute("when", "#[exception.causedBy(com.ucweb.esb.exception.InterceptorException)]");
+            cacheExceptionStrategy.addElement(QName.get("component", namespace))
+                    .addElement(QName.get("spring-object", namespace)).addAttribute("bean", exceptionProcessorName);
+        }
 
-    private static void addCustomTransformer(String transformerName, Document muleConfigDescriptor) {
-        Namespace namespace = muleConfigDescriptor.getRootElement().getNamespace();
-        Element transformerElement = DocumentHelper.createElement(QName.get("custom-transformer", namespace))
-                .addAttribute("name", "UC" + transformerName)
-                .addAttribute("class", "com.ucweb.esb.transformer.UCTransformer");
-        Namespace springNamespace = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("spring");
-        DocumentHelper.createDocument(transformerElement).getRootElement()
-                .addElement(QName.get("property", springNamespace, "spring:property"))
-                .addAttribute("name", "dataTransformer")
-                .addAttribute("ref", transformerName);
-        muleConfigDescriptor.getRootElement().add(transformerElement);
-//        Logger.debug(muleConfigDescriptor.asXML())
-    }
+        choiceExceptionStrategy.addElement(QName.get("catch-exception-strategy", namespace))
+                .addElement(QName.get("component", namespace))
+                .addElement(QName.get("spring-object", namespace)).addAttribute("bean", "defaultGlobalExceptionHandler");
 
-    private  static void generateJMSConnectorClientId(Document muleConfigDescriptor) {
-        for (Object node :  muleConfigDescriptor.selectNodes("//jms:activemq-xa-connector")) {
+        addOrUpdateService(name, Service.Type.PROXY, "*", inboundAddress, targetUrl);
+    }
+//
+//    private static void addCustomDataProcessor(String transformerName, Document muleConfigDescriptor) {
+//        Namespace namespace = muleConfigDescriptor.getRootElement().getNamespace();
+//        Element transformerElement = DocumentHelper.createElement(QName.get("custom-transformer", namespace))
+//                .addAttribute("name", "UC" + transformerName)
+//                .addAttribute("class", "com.ucweb.esb.transformer.UCTransformer");
+//        Namespace springNamespace = muleConfigDescriptor.getRootElement().getNamespaceForPrefix("spring");
+//        DocumentHelper.createDocument(transformerElement).getRootElement()
+//                .addElement(QName.get("property", springNamespace, "spring:property"))
+//                .addAttribute("name", "dataTransformer")
+//                .addAttribute("ref", transformerName);
+//        muleConfigDescriptor.getRootElement().add(transformerElement);
+////        Logger.debug(muleConfigDescriptor.asXML())
+//    }
+
+    private static void generateJMSConnectorClientId(Document muleConfigDescriptor) {
+        for (Object node : muleConfigDescriptor.selectNodes("//jms:activemq-xa-connector")) {
             System.out.println();
             ((Element) node).addAttribute("clientId", UUID.randomUUID().toString());
             System.out.println(((Node) node).asXML());
@@ -310,5 +400,6 @@ public class Register extends Controller {
             ((Element) node).addAttribute("clientId", UUID.randomUUID().toString());
         }
     }
+
 
 }

@@ -1,18 +1,22 @@
-<services>
-    <service name="logjson" address="http://10.1.45.208:9000/logjson">
-        <before-transformer name="BeforeJsonTransformer"/>
-        <after-transformer name="AfterJsonTransformer"/>
-
+<services appKey="XXXX">
+    <service name="logjson" path="/logjson"  address="http://10.1.45.208:9000/logjson">
+        <data-processor name="JsonProcessor"/>
     </service>
 
-    <service name="getjson" address="http://10.1.45.208:900/getjson"/>
+    <service name="getjson" path="/getjson" address="http://10.1.45.208:9000/getjson"/>
+
+    <service name="invokeAction"  path="/action/invoke" address="http://10.1.45.208:9000/action/invoke">
+        <service-monitor address="http://localhost:9000/service/check"/>
+        <data-processor name="ActionDataProcessor" class="com.ucweb.esb.processor.ActionDataProcessor"/>
+        <exception-processor name="ActionExceptionProcessor"/>
+    </service>
 
     <service name="finance-send" type="mq" topic="finance" path="/topic/send" method="post"/>
 
-    <service name="finance-receive-1" type="mq" topic="finance" path="/topic/receive1" />
+    <service name="finance-receive-1" type="mq" topic="finance" path="/topic/receive1"/>
 
-    <service name="finance-receive-2" type="mq" topic="finance" path="/topic/receive2" />
-    <service name="finance-receive-3" type="mq" topic="finance" path="/topic/receive3" />
-    <service name="finance-receive-4" type="mq" topic="finance" path="/topic/receive4" />
+    <service name="finance-receive-2" type="mq" topic="finance" path="/topic/receive2"/>
+    <service name="finance-receive-3" type="mq" topic="finance" path="/topic/receive3"/>
+    <service name="finance-receive-4" type="mq" topic="finance" path="/topic/receive4"/>
 
 </services>
